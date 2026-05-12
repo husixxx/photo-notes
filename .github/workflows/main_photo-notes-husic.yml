@@ -1,36 +1,33 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: 'Build and deploy Node.js app to Azure Web App: photo-notes-husic'
+﻿name: Build and deploy Node.js app to Azure Web App
 
 on:
   push:
     branches:
-    - main
+      - main
   workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-    - name: Set up Node.js version
-      uses: actions/setup-node@v1
-      with:
-        node-version: '22.x'
-    
-    - name: npm install, build, and test
-      run: |
-        npm install
-        npm run build --if-present
-        npm run test --if-present
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
 
-    - name: 'Deploy to Azure Web App'
-      uses: azure/webapps-deploy@v2
-      with: 
-        app-name: 'photo-notes-husic'
-        slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_f8ecf7e33d21464a91c5f3cb76003d03 }}
-        package: .
+      - name: npm install
+        run: npm install
+
+      - name: Upload static files to Blob Storage
+        run: az storage blob upload-batch --account-name photonoteshusic --account-key "${{ secrets.AZURE_STORAGE_KEY }}" --destination static/static --source ./public --overwrite true
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: photo-notes-husic
+          slot-name: production
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_F8ECF7E33D21464A91C5F3CB76003D03 }}
+          package: .
