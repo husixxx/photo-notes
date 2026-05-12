@@ -21,13 +21,9 @@ jobs:
       - name: npm install
         run: npm install
 
-      - name: Upload static files to Blob Storage
-        run: az storage blob upload-batch --account-name photonoteshusic --account-key "${{ secrets.AZURE_STORAGE_KEY }}" --destination static/static --source ./public --overwrite true
-
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@v3
         with:
           app-name: photo-notes-husic
-          slot-name: production
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_F8ECF7E33D21464A91C5F3CB76003D03 }}
           package: .
