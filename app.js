@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
 const multer = require('multer');
@@ -18,7 +18,24 @@ const pool = new Pool({
 async function initDB() {
   const client = await pool.connect();
   try {
-    await client.query('CREATE TABLE IF NOT EXISTS notes (id SERIAL PRIMARY KEY, title VARCHAR(255) NOT NULL, content TEXT, image_url TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notes (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        content TEXT,
+        image_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS comments (
+        id SERIAL PRIMARY KEY,
+        note_id INTEGER REFERENCES notes(id) ON DELETE CASCADE,
+        author VARCHAR(100) NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
     console.log('Database initialized');
   } finally { client.release(); }
 }
@@ -59,12 +76,44 @@ const staticBaseUrl = process.env.AZURE_STATIC_URL || '';
 app.use((req, res, next) => { res.locals.staticBaseUrl = staticBaseUrl; next(); });
 if (!process.env.AZURE_STATIC_URL) { app.use('/static', express.static(path.join(__dirname, 'public'))); }
 
+// Home - list all notes
 app.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM notes ORDER BY created_at DESC');
-    const notes = result.rows.map(note => { if (note.image_url && sharedKeyCredential) { note.image_display_url = generateSasUrl(note.image_url); } else if (note.image_url) { note.image_display_url = note.image_url; } return note; });
+    const notes = result.rows.map(note => {
+      if (note.image_url && sharedKeyCredential) { note.image_display_url = generateSasUrl(note.image_url); }
+      else if (note.image_url) { note.image_display_url = note.image_url; }
+      return note;
+    });
     res.render('index', { notes });
   } catch (err) { console.error('Error fetching notes:', err); res.status(500).render('error', { message: 'Failed to load notes' }); }
+});
+
+// Single note with comments
+app.get('/notes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const noteResult = await pool.query('SELECT * FROM notes WHERE id = $1', [id]);
+    if (noteResult.rows.length === 0) return res.status(404).render('error', { message: 'Note not found' });
+
+    const note = noteResult.rows[0];
+    if (note.image_url && sharedKeyCredential) { note.image_display_url = generateSasUrl(note.image_url); }
+    else if (note.image_url) { note.image_display_url = note.image_url; }
+
+    const commentsResult = await pool.query('SELECT * FROM comments WHERE note_id = $1 ORDER BY created_at ASC', [id]);
+
+    res.render('note', { note, comments: commentsResult.rows });
+  } catch (err) { console.error('Error fetching note:', err); res.status(500).render('error', { message: 'Failed to load note' }); }
+});
+
+// Add comment
+app.post('/notes/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { author, content } = req.body;
+    await pool.query('INSERT INTO comments (note_id, author, content) VALUES ($1, $2, $3)', [id, author || 'Anonymous', content]);
+    res.redirect('/notes/' + id);
+  } catch (err) { console.error('Error adding comment:', err); res.status(500).render('error', { message: 'Failed to add comment' }); }
 });
 
 app.get('/new', (req, res) => { res.render('new'); });

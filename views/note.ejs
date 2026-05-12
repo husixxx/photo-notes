@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= note.title %> - Photo Notes</title>
+  <link rel="stylesheet" href="<%= staticBaseUrl %>/static/css/style.css">
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1><a href="/">&#128248; Photo Notes</a></h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="note-detail">
+      <div class="note-detail-header">
+        <h2><%= note.title %></h2>
+        <span class="note-date"><%= new Date(note.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
+      </div>
+
+      <% if (note.image_display_url) { %>
+        <div class="note-detail-image" onclick="openLightbox(this.querySelector('img').src)">
+          <img src="<%= note.image_display_url %>" alt="<%= note.title %>">
+          <div class="click-hint">Click to expand</div>
+        </div>
+      <% } %>
+
+      <% if (note.content) { %>
+        <div class="note-detail-content">
+          <p><%= note.content %></p>
+        </div>
+      <% } %>
+
+      <div class="note-actions">
+        <a href="/" class="btn btn-secondary">Back</a>
+        <form action="/notes/<%= note.id %>/delete" method="POST" style="display:inline">
+          <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this note?')">Delete Note</button>
+        </form>
+      </div>
+
+      <!-- Comments Section -->
+      <div class="comments-section">
+        <h3>Comments (<%= comments.length %>)</h3>
+
+        <% if (comments.length === 0) { %>
+          <p class="no-comments">No comments yet. Be the first!</p>
+        <% } %>
+
+        <% comments.forEach(comment => { %>
+          <div class="comment">
+            <div class="comment-header">
+              <strong class="comment-author"><%= comment.author %></strong>
+              <span class="comment-date"><%= new Date(comment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
+            </div>
+            <p class="comment-body"><%= comment.content %></p>
+          </div>
+        <% }) %>
+
+        <div class="comment-form">
+          <h4>Add a comment</h4>
+          <form action="/notes/<%= note.id %>/comments" method="POST">
+            <div class="form-group">
+              <input type="text" name="author" placeholder="Your name (optional)" maxlength="100">
+            </div>
+            <div class="form-group">
+              <textarea name="content" rows="3" placeholder="Write a comment..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Post Comment</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <span class="lightbox-close">&times;</span>
+    <img id="lightbox-img" src="" alt="Full size">
+  </div>
+
+  <script>
+    function openLightbox(src) {
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lightbox').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+  </script>
+</body>
+</html>

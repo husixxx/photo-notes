@@ -9,7 +9,7 @@
 <body>
   <header>
     <div class="header-content">
-      <h1>📸 Photo Notes</h1>
+      <h1>&#128248; Photo Notes</h1>
       <a href="/new" class="btn btn-primary">+ New Note</a>
     </div>
   </header>
@@ -24,20 +24,22 @@
     <div class="notes-grid">
       <% notes.forEach(note => { %>
         <div class="note-card">
-          <% if (note.image_display_url) { %>
-            <div class="note-image">
-              <img src="<%= note.image_display_url %>" alt="<%= note.title %>" loading="lazy">
+          <a href="/notes/<%= note.id %>" class="note-link">
+            <% if (note.image_display_url) { %>
+              <div class="note-image">
+                <img src="<%= note.image_display_url %>" alt="<%= note.title %>" loading="lazy">
+              </div>
+            <% } %>
+            <div class="note-body">
+              <h2><%= note.title %></h2>
+              <p><%= note.content ? note.content.substring(0, 150) + (note.content.length > 150 ? '...' : '') : '' %></p>
             </div>
-          <% } %>
-          <div class="note-body">
-            <h2><%= note.title %></h2>
-            <p><%= note.content %></p>
-            <div class="note-footer">
-              <span class="note-date"><%= new Date(note.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
-              <form action="/notes/<%= note.id %>/delete" method="POST" class="delete-form">
-                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this note?')">Delete</button>
-              </form>
-            </div>
+          </a>
+          <div class="note-footer">
+            <span class="note-date"><%= new Date(note.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+            <form action="/notes/<%= note.id %>/delete" method="POST" class="delete-form">
+              <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this note?')">Delete</button>
+            </form>
           </div>
         </div>
       <% }) %>
