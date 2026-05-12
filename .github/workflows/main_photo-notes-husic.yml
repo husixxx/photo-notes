@@ -21,9 +21,13 @@ jobs:
       - name: npm install
         run: npm install
 
+      - name: Zip artifact
+        run: zip -r deploy.zip . -x '.git/*'
+
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: photo-notes-husic
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_F8ECF7E33D21464A91C5F3CB76003D03 }}
-          package: .
+        run: |
+          curl -X POST \
+            -u "${{ secrets.DEPLOY_USER }}:${{ secrets.DEPLOY_PASS }}" \
+            --data-binary @deploy.zip \
+            -H "Content-Type: application/octet-stream" \
+            "https://photo-notes-husic.scm.azurewebsites.net/api/zipdeploy?isAsync=true"
