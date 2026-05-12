@@ -36,6 +36,14 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reactions (
+        id SERIAL PRIMARY KEY,
+        comment_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
+        emoji VARCHAR(10) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
     console.log('Database initialized');
   } finally { client.release(); }
 }
@@ -76,7 +84,7 @@ const staticBaseUrl = process.env.AZURE_STATIC_URL || '';
 app.use((req, res, next) => { res.locals.staticBaseUrl = staticBaseUrl; next(); });
 if (!process.env.AZURE_STATIC_URL) { app.use('/static', express.static(path.join(__dirname, 'public'))); }
 
-// Home - list all notes
+// Home
 app.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM notes ORDER BY created_at DESC');
@@ -89,7 +97,7 @@ app.get('/', async (req, res) => {
   } catch (err) { console.error('Error fetching notes:', err); res.status(500).render('error', { message: 'Failed to load notes' }); }
 });
 
-// Single note with comments
+// Single note with comments and reactions
 app.get('/notes/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -102,7 +110,25 @@ app.get('/notes/:id', async (req, res) => {
 
     const commentsResult = await pool.query('SELECT * FROM comments WHERE note_id = $1 ORDER BY created_at ASC', [id]);
 
-    res.render('note', { note, comments: commentsResult.rows });
+    // Get reactions grouped by comment
+    const reactionsResult = await pool.query(
+      'SELECT comment_id, emoji, COUNT(*) as count FROM reactions WHERE comment_id IN (SELECT id FROM comments WHERE note_id = $1) GROUP BY comment_id, emoji ORDER BY count DESC',
+      [id]
+    );
+
+    // Attach reactions to comments
+    const reactionsMap = {};
+    reactionsResult.rows.forEach(r => {
+      if (!reactionsMap[r.comment_id]) reactionsMap[r.comment_id] = {};
+      reactionsMap[r.comment_id][r.emoji] = parseInt(r.count);
+    });
+
+    const comments = commentsResult.rows.map(c => {
+      c.reactions = reactionsMap[c.id] || {};
+      return c;
+    });
+
+    res.render('note', { note, comments });
   } catch (err) { console.error('Error fetching note:', err); res.status(500).render('error', { message: 'Failed to load note' }); }
 });
 
@@ -114,6 +140,19 @@ app.post('/notes/:id/comments', async (req, res) => {
     await pool.query('INSERT INTO comments (note_id, author, content) VALUES ($1, $2, $3)', [id, author || 'Anonymous', content]);
     res.redirect('/notes/' + id);
   } catch (err) { console.error('Error adding comment:', err); res.status(500).render('error', { message: 'Failed to add comment' }); }
+});
+
+// Add reaction to comment
+app.post('/comments/:commentId/react', async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const { emoji, noteId } = req.body;
+    const allowed = ['\u{1F44D}', '\u{1F602}', '\u{2764}\u{FE0F}', '\u{1F525}', '\u{1F622}', '\u{1F914}'];
+    if (allowed.includes(emoji)) {
+      await pool.query('INSERT INTO reactions (comment_id, emoji) VALUES ($1, $2)', [commentId, emoji]);
+    }
+    res.redirect('/notes/' + noteId);
+  } catch (err) { console.error('Error adding reaction:', err); res.redirect('back'); }
 });
 
 app.get('/new', (req, res) => { res.render('new'); });

@@ -411,3 +411,11 @@ header h1 {
   .form-card { padding: 1.25rem; }
   .note-detail-header h2 { font-size: 1.5rem; }
 }
+
+/* Reactions */
+.reactions-row { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+.reaction-form { display: inline; }
+.reaction-btn { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 2px 8px; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; display: flex; align-items: center; gap: 3px; }
+.reaction-btn:hover { background: #e8e4dc; transform: scale(1.1); }
+.reaction-btn.has-reactions { background: #e8f5e3; border-color: var(--primary); }
+.reaction-count { font-size: 0.75rem; font-family: 'DM Sans', sans-serif; color: var(--text-muted); }

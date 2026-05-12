@@ -21,6 +21,11 @@ jobs:
       - name: npm install
         run: npm install
 
+      - name: Upload static files to Blob Storage
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          az storage blob upload-batch --account-name photonoteshusic --account-key "${{ secrets.AZURE_STORAGE_KEY }}" --destination static/static --source ./public --overwrite true
+
       - name: Zip artifact
         run: zip -r deploy.zip . -x '.git/*'
 

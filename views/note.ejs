@@ -55,6 +55,18 @@
               <span class="comment-date"><%= new Date(comment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
             </div>
             <p class="comment-body"><%= comment.content %></p>
+            <div class="reactions-row">
+              <% const emojis = ['\u{1F44D}', '\u{1F602}', '\u{2764}\u{FE0F}', '\u{1F525}', '\u{1F622}', '\u{1F914}']; %>
+              <% emojis.forEach(emoji => { %>
+                <form action="/comments/<%= comment.id %>/react" method="POST" class="reaction-form">
+                  <input type="hidden" name="emoji" value="<%= emoji %>">
+                  <input type="hidden" name="noteId" value="<%= note.id %>">
+                  <button type="submit" class="reaction-btn <%= comment.reactions[emoji] ? 'has-reactions' : '' %>">
+                    <%= emoji %><% if (comment.reactions[emoji]) { %><span class="reaction-count"><%= comment.reactions[emoji] %></span><% } %>
+                  </button>
+                </form>
+              <% }) %>
+            </div>
           </div>
         <% }) %>
 
